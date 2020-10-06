@@ -22,25 +22,101 @@ import os   # Used for reading the FA file.
 # Finite Automata (FA) - the class that stores the states in our FA machine.
 class FA:
     faStates = []
+    languageCharacters = []
+    stateTransitions = []
+    currentState = ""
 
     # Constructor
     def __init__(self):
         self.faStates = []
+        self.languageCharacters = []
+        self.stateTransitions = []
+        self.currentState = ""
+    
+    def addState(self, newState):
+        self.faStates.append(newState)
+    
+    def findState(self, stateID):
+        for state in (self.faStates):
+            if (state.id == stateID):
+                return state
+        
+        return ""
+
+    def addLanguageCharacter(self, newLanguageCharacter):
+        self.languageCharacters.append(newLanguageCharacter)
+
+    # checkWord - checks the entire user input to see if it is a valid word in the language defined by the FA.
+    def checkWord(self, word):
+        self.currentState = ""
+
+        for faState in self.faStates:
+            if (faState.id == "A"):
+                self.currentState = faState
+
+        for i, character in enumerate(word):
+            if (isinstance(self.currentState, str)):
+                print("currentState variable test failed. Tested as string.")
+                return False
+            else:
+                goodTransition, nextState = self.currentState.checkTransition(character)
+
+                if (goodTransition):
+                    self.stateTransitions.append(self.currentState)
+                    self.currentState = nextState
+
+                    if (i >= len(word) - 1):
+                        self.stateTransitions.append(self.currentState) 
+
+                else:
+                    print("A bad transition occurred.")
+                    return False
+
+        # Print the transitions.
+        self.printTransitions(word)
+
+        # Print if the word is valid or invalid.
+        if (self.currentState.isFinalState):
+            print("The word, %s, is valid." % (word))
+            return True
+
+        else:
+            print("The word, %s, is invalid." % (word))
+            return False
 
     # print - Prints the Machine and all of its states.
     def print(self):
         print("The FA Machine:")
 
         for faState in self.faStates:
-            print("%s:" % (faState.id), end=" ")
+
+            if (faState.isFinalState):
+                print("(%s):" % (faState.id), end=" ")
+            else:
+                print(" %s :" % (faState.id), end=" ")
             
             for faConnection in faState.connections:
-                print("%s" % (faConnection), end=" ")
-            
-            if (faState.isFinalState):
-                print("(Final State)", end=" ")
+                if (faConnection.isFinalState):
+                    print("(%s)" % (faConnection.id), end=" ")
+                else:
+                    print(" %s " % (faConnection.id), end=" ")
 
             print("")
+    
+    # printTransitions - prints the transitions taken thus far, or overall, when processing an input.
+    def printTransitions(self, word):
+        print("Transition Graph for %s: " % (word))
+
+        for i, state in enumerate(self.stateTransitions):
+            if (state.isFinalState):
+                print("(%s)" % (state.id), end=" ")
+            else:
+                print("%s" % (state.id), end=" ")
+
+            if (i < len(self.stateTransitions) - 1):
+                print("-- %s -->" % (word[i]), end=" ")
+            else:
+                print("") # for the new line
 
 # FA State - the class that stores the ID, the "Final State" flag, and the listing of connections to other states.
 class FAState:
@@ -53,6 +129,19 @@ class FAState:
         self.id = id
         self.connections = []
         self.isFinalState = False
+
+    def addConnection (self, transitionValue, newState):
+        self.connections.append({"nextState": newState, "transitionValue": transitionValue})
+    
+    # checkTransition - checks if the specified input can get from the current state to the next state.
+    def checkTransition(self, input):
+        try:
+            nextState = self.connections[int(input)]
+            return True, nextState
+
+        except:
+            print("Unable to transition to next state.")
+            return False, self
     
     # print - Prints the state's information.
     def print(self):
@@ -67,164 +156,104 @@ class FAState:
             
         print("Final State: " % (self.isFinalState))
 
-# UserInput - class that represents the user's provided input, and the state transitions that occur during processing.
-class UserInput:
-    value = ''
-    stateTransitions = []
-
-    # Constructor
-    def __init__(self, input):
-        self.value = input
-        self.stateTransitions = []
-    
-    # printInput - prints the user's specified input.
-    def printInput(self):
-        print("Input: %s" % (self.value))
-
-    # printTransitions - prints the transitions taken thus far, or overall, when processing an input.
-    def printTransitions(self):
-        for i, state in enumerate(self.stateTransitions):
-            print("%s" % (state), end=" ")
-
-            if (i < len(self.stateTransitions) - 1):
-                print("--%s-->" % (self.value[i]), end=" ")
-            else:
-                print("") # for the new line
-
 # readFAFile - reads the specified file, parsing its content for FA states and final states.
-def readFAFile(filename):
+def readFAFile(filename, faMachine):
     dimensionsCollected = False
     acceptFAStates = True
     finalStatesCollected = False
     finalStateSet = False
 
-    nodeIDs = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    stateIDs = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
-    faMachine = FA()
-    faMatrixX = 0
-    faMatrixY = 0
+    maxX = 0
+    maxY = 0
     currentY = 0
     finalStatesCount = 0
 
-    with open(filename) as f:
-        for line in f:
-            # Split line content, remove new line characters
-            currentLine = line.replace("\n", "").split(" ")
+    try:
+        with open(filename) as f:
+            for line in f:
+                # Split line content, remove new line characters
+                currentLine = line.replace("\n", "").split(" ")
 
-            # Determine if line is dimensional value or actual value.
-            if (not dimensionsCollected):
-                dimensionsCollected = True
-                faMatrixX = currentLine[0]
-                faMatrixY = currentLine[1]
-            else:
-                try:
-                    firstCharacterIntTest = int(currentLine[0])
-                    acceptFAStates = False
-                    finalStatesCount = currentLine[0]
-                except:
-                    if ((type(currentLine[0]) != "int") and (acceptFAStates)):
-                        newFAState = FAState(nodeIDs[currentY])
-                        
-                        for nodeID in currentLine:
-                            newFAState.connections.append(nodeID)
+                # Determine if line is dimensional value or actual value.
+                if (not dimensionsCollected):
+                    dimensionsCollected = True
+
+                    maxX = int(currentLine[0])
+                    maxY = int(currentLine[1])
+
+                    for x in range(maxX):
+                        newState = FAState(stateIDs[x])
+                        faMachine.addState(newState)
                     
-                        currentY += 1
+                    for y in range(maxY):
+                        faMachine.addLanguageCharacter(y)
 
-                        faMachine.faStates.append(newFAState)
+                else:
+                    try:
+                        firstCharacterIntTest = int(currentLine[0])
+                        acceptFAStates = False
+                        finalStatesCount = currentLine[0]
+                    except:
+                        if ((type(currentLine[0]) != "int") and (acceptFAStates)):
+                            currentFAState = faMachine.findState(stateIDs[currentY])
 
-                    elif ((not acceptFAStates) and (not finalStatesCollected)):
-                        for finalState in currentLine:
-                            finalStateSet = False
+                            if (currentFAState == ""):
+                                print("Error - state does not exist.")
+                            else:
+                                for connectionID in currentLine:
+                                    connectionState = faMachine.findState(connectionID)
 
-                            for machineState in faMachine.faStates:
-                                if (machineState.id == finalState):
-                                    machineState.isFinalState = True
-                                    finalStateSet = True
-                            
-                            if (not finalStateSet):
-                                print("Error: Specified Final State does not exist in machine.")
+                                    if (connectionState == ""):
+                                        print("Error - state does not exist for specified connection.")
+                                    else:
+                                        currentFAState.connections.append(connectionState)
                         
-    
-        f.close()
+                            currentY += 1
+
+                        elif ((not acceptFAStates) and (not finalStatesCollected)):
+                            for finalState in currentLine:
+                                finalStateSet = False
+
+                                for machineState in faMachine.faStates:
+                                    if (machineState.id == finalState):
+                                        machineState.isFinalState = True
+                                        finalStateSet = True
+                                
+                                if (not finalStateSet):
+                                    print("Error: Specified Final State does not exist in machine.")
+                            
+        
+            f.close()
+    except:
+        print("Unable to read FA file.")
+        return ""
 
     return faMachine
 
-# checkTransition - checks if the specified input can get from the current state to the next state.
-def checkTransition(input, currentState, faNode):
-    try:
-        nextState = faNode.connections[int(input)]
-        return True, nextState
-    except:
-        print("Unable to transition to next state.")
-        return False, ""
-
-# checkInput - checks the entire user input to see if it is a valid word in the language defined by the FA.
-def checkInput(input, faMachine):
-    currentState = "A"
-
-    for i, character in enumerate(input.value):
-        currentNode = ""
-
-        for faState in faMachine.faStates:
-            if (faState.id == currentState):
-                currentNode = faState
-
-        if (isinstance(currentNode, str)):
-            return False
-        else:
-            goodTransition, nextState = checkTransition(character, currentState, currentNode)
-            
-            if (goodTransition):
-                input.stateTransitions.append(currentState)
-                currentState = nextState
-
-                if (i >= len(input.value) - 1):
-                   input.stateTransitions.append(currentState) 
-
-            else:
-                print("A bad transition occurred.")
-                return False
-
-    for faState in faMachine.faStates: 
-        if (faState.id == currentState):
-            if (faState.isFinalState):
-                return True
-            else:
-                return False
-    
-    return False
-
 # main - main function of the script.
 def main():
-    # Variable Declaration
-    userInput = ''
+    
+    # Create blank FA
+    faMachine = FA()
 
     # Retrieve filename
     faFilename = input("What is the name of the file containing the FA file? ")
 
     # Read file content
-    faMachine = readFAFile(faFilename)
+    faMachine = readFAFile(faFilename, faMachine)
 
-    # Print the FA 
-    faMachine.print()
+    if (faMachine != ""):
+        # Print the FA 
+        faMachine.print()
 
-    # Retrieve word
-    word = input("What word would you like to test against the FA? ")
-    
-    # Initialize the UserInput
-    userInput = UserInput(word)
+        # Retrieve word
+        word = input("What word would you like to test against the FA? ")
 
-    # Validate the Word
-    validWord = checkInput(userInput, faMachine)
-    
-    # Print the transitions.
-    userInput.printTransitions()
-    
-    # Print wether or not the word is valid/invalid.
-    if (validWord):
-        print("The word, %s, is valid." % (userInput.value))
-    else:
-        print("The word, %s, is invalid." % (userInput.value))
+        if (word != ""):
+            # Validate the Word
+            faMachine.checkWord(word)
 
 # Calling main...
 main()

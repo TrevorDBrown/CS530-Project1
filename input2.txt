@@ -1,0 +1,29 @@
+10 26
+A B C D E F G H I J
+B C D E F G H I J K
+C D E F G H I J K L
+D E F G H I J K L M
+E F G H I J K L M N
+F G H I J K L M N O
+G H I J K L M N O P
+H I J K L M N O P Q
+I J K L M N O P Q R
+J K L M N O P Q R S
+K L M N O P Q R S T
+L M N O P Q R S T U
+M N O P Q R S T U V
+N O P Q R S T U V W
+O P Q R S T U V W X
+P Q R S T U V W X Y
+Q R S T U V W X Y Z
+R S T U V W X Y Z A
+S T U V W X Y Z A B
+T U V W X Y Z A B C
+U V W X Y Z A B C D
+V W X Y Z A B C D E
+W X Y Z A B C D E F 
+X Y Z A B C D E F G
+Y Z A B C D E F G H
+Z A B C D E F G H I
+26
+A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
